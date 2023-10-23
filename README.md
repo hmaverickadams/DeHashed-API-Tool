@@ -2,10 +2,10 @@
 A command-line tool to query the Dehashed API. Easily search for various parameters like usernames, emails, hashed passwords, IP addresses, and more.
 
 ## Features
--Search the Dehashed API using multiple parameters.
--Output unique results to a CSV file.
--Fetch unique password results.
--Silent output mode for minimal console output.
+- Search the Dehashed API using multiple parameters.
+- Output unique results to a CSV file.
+- Fetch unique password results.
+- Silent output mode for minimal console output.
 
 ## Installation
 ### Prerequisites
@@ -26,11 +26,11 @@ cd DeHashed-API-Tool
 
 ## Usage
 ### Running the tool:
-`python dehashed_parset.py --help`
+`python dehashed_parser.py --help`
 
 ### Options:
 ```
-usage: scrape.py [-h] [-a ADDRESS] [-e EMAIL] [-H HASHED_PASSWORD] [-i IP_ADDRESS] [-n NAME] [-p PASSWORD]
+usage: dehashed_parser.py [-h] [-a ADDRESS] [-e EMAIL] [-H HASHED_PASSWORD] [-i IP_ADDRESS] [-n NAME] [-p PASSWORD]
                  [-P PHONE_NUMBER] [-u USERNAME] [-v VIN] [-o OUTPUT] [-oS OUTPUT_SILENTLY] [-s SIZE]
                  [--only-passwords]
 
@@ -94,7 +94,7 @@ The above will return all passwords for the queried domain, sorted alphabeticall
 
 ## Advanced Usage
 ### OR Searches on a Single Field
-`dehashed_parser.py -e "(email.com example.com)"'
+`dehashed_parser.py -e "(email.com example.com)"`
 
 The above will return results for both `email.com` and `example.com` domains
 
@@ -105,6 +105,7 @@ The above will return results for the exact name of "Bob Ross".
 
 ### Wildcards
 `dehashed_parser.py -n -e '"examp?e"' -s 10`
+
 `dehashed_parser.py -n -e '"exampl*e"' -s 10`
 
 The above will return 10 results utilizing the wildcard
