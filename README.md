@@ -106,7 +106,7 @@ The above will return results for the exact name of "Bob Ross".
 ### Wildcards
 `dehashed_parser.py -n -e '"examp?e"' -s 10`
 
-`dehashed_parser.py -n -e '"exampl*e"' -s 10`
+`dehashed_parser.py -n -e '"examp*e"' -s 10`
 
 The above will return 10 results utilizing the wildcard
 
