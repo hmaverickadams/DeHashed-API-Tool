@@ -1,4 +1,4 @@
-# Dehashed-API-Tool
+# DeHashed-API-Tool
 A command-line tool to query the Dehashed API. Easily search for various parameters like usernames, emails, hashed passwords, IP addresses, and more.
 
 ## Features
@@ -15,7 +15,7 @@ Steps
 1. Clone this repository:
 ```
 git clone https://github.com/hmaverickadams/Dehashed-API-Tool.git
-cd dehashed-api-tool
+cd Dehashed-API-Tool
 ```
 
 2. Install the required packages:
@@ -33,7 +33,7 @@ usage: scrape.py [-h] [-a ADDRESS] [-e EMAIL] [-H HASHED_PASSWORD] [-i IP_ADDRES
                  [-P PHONE_NUMBER] [-u USERNAME] [-v VIN] [-o OUTPUT] [-oS OUTPUT_SILENTLY] [-s SIZE]
                  [--only-passwords]
 
-Query the Dehashed API
+Query the DeHashed API
 
 options:
   -h, --help            show this help message and exit
