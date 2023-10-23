@@ -14,8 +14,8 @@ Ensure you have Python 3.x installed.
 Steps
 1. Clone this repository:
 ```
-git clone https://github.com/hmaverickadams/Dehashed-API-Tool.git
-cd Dehashed-API-Tool
+git clone https://github.com/hmaverickadams/DeHashed-API-Tool.git
+cd DeHashed-API-Tool
 ```
 
 2. Install the required packages:
