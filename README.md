@@ -9,7 +9,8 @@ A command-line tool to query the Dehashed API. Easily search for various paramet
 
 ## Installation
 ### Prerequisites
-Ensure you have Python 3.x installed.
+1. Ensure you have Python 3.x installed.
+2. A valid DeHashed account, API key, and paid API credits are required.
 
 Steps
 1. Clone this repository:
