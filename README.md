@@ -22,7 +22,7 @@ cd DeHashed-API-Tool
 2. Install the required packages:
 `pip install -r requirements.txt`
 
-3. Change the `<email>` and `<api-key>` to your DeHashed account email and API key.  Ensure you remove the `<>` placeholders.
+3. Change the `<email>` and `<api-key>` in the `config.txt` file to your DeHashed account email and API key.  Ensure you remove the `<>` placeholders.
 
 ## Usage
 ### Running the tool:
