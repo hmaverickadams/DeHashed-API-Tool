@@ -93,7 +93,7 @@ The above will return all passwords for the queried domain, sorted alphabeticall
 
 ## Advanced Usage
 ### OR Searches on a Single Field
-`dehashed_parser.py -e "(email.com/ @xample.com)"'
+`dehashed_parser.py -e "(email.com example.com)"'
 
 The above will return results for both `email.com` and `example.com` domains
 
