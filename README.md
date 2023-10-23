@@ -12,7 +12,7 @@ A command-line tool to query the Dehashed API. Easily search for various paramet
 1. Ensure you have Python 3.x installed.
 2. A valid DeHashed account, API key, and paid API credits are required.
 
-Steps
+### Steps
 1. Clone this repository:
 ```
 git clone https://github.com/hmaverickadams/DeHashed-API-Tool.git
