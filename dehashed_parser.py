@@ -123,24 +123,36 @@ def main():
         for entry in data["entries"]:
             all_keys.update([k for k, v in entry.items() if v and v != "null"])
 
-        # Exclude 'database' and 'id'
-        all_keys -= {'database', 'id'}
+        # Exclude 'database', 'id', and 'database_name'
+        all_keys -= {'database', 'id', 'database_name'}
         sorted_all_keys = [primary_key] + [k for k in sorted(list(all_keys)) if k != primary_key]
 
         target_file = args.output if args.output else args.output_silently
         with open(target_file, 'w', newline='') as csvfile:
+            seen_rows = set()  # This set will store the signatures of seen entries
+        
             if args.only_passwords:
                 fieldnames = [primary_key, 'password']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer = csv.DictWriter(csvfile, fieldnames=sorted_all_keys)
                 writer.writeheader()
-                for entry in unique_results:
-                    if entry.get('password'):
-                        writer.writerow({k: entry[k] for k in fieldnames if k in entry and entry[k] and entry[k] != "null"})
+            
+                for entry in sorted(data["entries"], key=lambda x: x.get(primary_key, "").lower()):
+                    row_data = {k: entry[k] for k in sorted_all_keys if k in entry and entry[k] and entry[k] != "null"}
+                    row_str = ','.join([str(row_data[k]) for k in sorted_all_keys if k in row_data])
+                
+                    if row_str not in seen_rows:
+                        writer.writerow(row_data)
+                        seen_rows.add(row_str)
             else:
                 writer = csv.DictWriter(csvfile, fieldnames=sorted_all_keys)
                 writer.writeheader()
                 for entry in sorted(data["entries"], key=lambda x: x.get(primary_key, "").lower()):
-                    writer.writerow({k: entry[k] for k in sorted_all_keys if k in entry and entry[k] and entry[k] != "null"})
+                    row_data = {k: entry[k] for k in sorted_all_keys if k in entry and entry[k] and entry[k] != "null"}
+                    row_str = ','.join([str(row_data[k]) for k in sorted_all_keys if k in row_data])
+
+                    if row_str not in seen_rows:
+                        writer.writerow(row_data)
+                        seen_rows.add(row_str)
 
     if args.output_silently:
         print(f"Results returned and saved in {args.output_silently}")
