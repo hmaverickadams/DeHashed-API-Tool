@@ -12,23 +12,34 @@ def escape_special_chars(query):
     return quote(query, safe='')
 
 def build_query(args):
-    queries = []
-    for key, value in vars(args).items():
-        if key in ['address', 'email', 'hashed_password', 'ip_address', 'name', 'password', 'phone_number', 'username', 'vin']:
-            if value:
-                queries.append(f"{key}:{escape_special_chars(value)}")
+    queries = [
+        f"{key}:{escape_special_chars(value)}"
+        for key, value in vars(args).items()
+        if key
+        in [
+            'address',
+            'email',
+            'hashed_password',
+            'ip_address',
+            'name',
+            'password',
+            'phone_number',
+            'username',
+            'vin',
+        ]
+        and value
+    ]
     return "&".join(queries)
 
 def query_api(query, size, email, api_key):
     headers = {
         'Accept': 'application/json',
     }
-    response = requests.get(
-        f'https://api.dehashed.com/search?query={query}&size={size}', 
-        auth=(email, api_key), 
-        headers=headers
+    return requests.get(
+        f'https://api.dehashed.com/search?query={query}&size={size}',
+        auth=(email, api_key),
+        headers=headers,
     )
-    return response
 
 def unique_password_results(data):
     seen = set()
@@ -43,7 +54,7 @@ def unique_password_results(data):
 def main():
     with open('config.txt', 'r') as file:
         email, api_key = file.read().splitlines()
-    
+
     parser = argparse.ArgumentParser(description="Query the Dehashed API", 
                                      epilog="Usage examples:\n"
                                             "  dehashed_parser.py -u username\n"
@@ -79,10 +90,10 @@ def main():
     if not 1 <= args.size <= 10000:
         print("Size value should be between 1 and 10000.")
         return
-    
+
     query = build_query(args)
     response = query_api(query, args.size, email, api_key)
-    
+
     if response.status_code != 200:
         print(f"HTTP Response Code: {response.status_code}")
         print(response.text)
@@ -116,8 +127,13 @@ def main():
 
     elif not args.output_silently:
         for key in sorted_keys:
-            values = list(set([entry[key].lower() for entry in data["entries"] if key in entry and entry[key]]))
-            if values:
+            if values := list(
+                {
+                    entry[key].lower()
+                    for entry in data["entries"]
+                    if key in entry and entry[key]
+                }
+            ):
                 values.sort()
                 print(f"{key}s: {', '.join(values)}")
 
@@ -125,32 +141,36 @@ def main():
         print(f"You have {data['balance']} API credits remaining")
 
     if args.output or args.output_silently:
-        all_keys = set()
-        for entry in data["entries"]:
-            all_keys.update([k for k, v in entry.items() if v and v != "null"])
-
-        # Exclude 'database' and 'id'
-        all_keys -= {'database', 'id'}
-        sorted_all_keys = [primary_key] + [k for k in sorted(list(all_keys)) if k != primary_key]
-
-        target_file = args.output if args.output else args.output_silently
-        with open(target_file, 'w', newline='') as csvfile:
-            if args.only_passwords:
-                fieldnames = [primary_key, 'password']
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-                for entry in unique_results:
-                    if entry.get('password'):
-                        writer.writerow({k: entry[k] for k in fieldnames if k in entry and entry[k] and entry[k] != "null"})
-            else:
-                writer = csv.DictWriter(csvfile, fieldnames=sorted_all_keys)
-                writer.writeheader()
-                for entry in sorted(data["entries"], key=lambda x: x.get(primary_key, "").lower()):
-                    writer.writerow({k: entry[k] for k in sorted_all_keys if k in entry and entry[k] and entry[k] != "null"})
-
+        _extracted_from_main_86(data, primary_key, args, unique_results)
     if args.output_silently:
         print(f"Results returned and saved in {args.output_silently}")
         print(f"You have {data['balance']} API credits remaining")
+
+
+# TODO Rename this here and in `main`
+def _extracted_from_main_86(data, primary_key, args, unique_results):
+    all_keys = set()
+    for entry in data["entries"]:
+        all_keys.update([k for k, v in entry.items() if v and v != "null"])
+
+    # Exclude 'database' and 'id'
+    all_keys -= {'database', 'id'}
+    sorted_all_keys = [primary_key] + [k for k in sorted(list(all_keys)) if k != primary_key]
+
+    target_file = args.output or args.output_silently
+    with open(target_file, 'w', newline='') as csvfile:
+        if args.only_passwords:
+            fieldnames = [primary_key, 'password']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for entry in unique_results:
+                if entry.get('password'):
+                    writer.writerow({k: entry[k] for k in fieldnames if k in entry and entry[k] and entry[k] != "null"})
+        else:
+            writer = csv.DictWriter(csvfile, fieldnames=sorted_all_keys)
+            writer.writeheader()
+            for entry in sorted(data["entries"], key=lambda x: x.get(primary_key, "").lower()):
+                writer.writerow({k: entry[k] for k in sorted_all_keys if k in entry and entry[k] and entry[k] != "null"})
             
 if __name__ == "__main__":
     main()
