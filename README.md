@@ -32,7 +32,7 @@ cd DeHashed-API-Tool
 ```
 usage: dehashed_parser.py [-h] [-a ADDRESS] [-e EMAIL] [-H HASHED_PASSWORD] [-i IP_ADDRESS] [-n NAME] [-p PASSWORD]
                  [-P PHONE_NUMBER] [-u USERNAME] [-v VIN] [-o OUTPUT] [-oS OUTPUT_SILENTLY] [-s SIZE]
-                 [--only-passwords]
+                 [--only-passwords] [--all]
 
 Query the DeHashed API
 
@@ -60,6 +60,7 @@ options:
                         Outputs to CSV silently. A file name is required.
   -s SIZE, --size SIZE  Specify the size, between 1 and 10000
   --only-passwords      Return only passwords
+  --all                 Save all size results, up to 30000
 ```
 
 ### Basic Usage:
