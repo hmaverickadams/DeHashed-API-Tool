@@ -68,7 +68,7 @@ def main():
     parser.add_argument('-oS', '--output_silently', help="Outputs to CSV silently. A file name is required.")
     parser.add_argument('-s', '--size', type=int, default=10000, help="Specify the size, between 1 and 10000")
     parser.add_argument('--only-passwords', action="store_true", help="Return only passwords")
-    parser.add_argument('-all', action="store_true", help="Save all results, up to 30000")
+    parser.add_argument('--all', action="store_true", help="Save all results, up to 30000")
 
 
     args = parser.parse_args()
