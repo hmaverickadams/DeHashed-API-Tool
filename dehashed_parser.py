@@ -68,6 +68,8 @@ def main():
     parser.add_argument('-oS', '--output_silently', help="Outputs to CSV silently. A file name is required.")
     parser.add_argument('-s', '--size', type=int, default=10000, help="Specify the size, between 1 and 10000")
     parser.add_argument('--only-passwords', action="store_true", help="Return only passwords")
+    parser.add_argument('-all', action="store_true", help="Save all results, up to 30000")
+
 
     args = parser.parse_args()
 
@@ -99,6 +101,42 @@ def main():
     if not data["entries"]:
         print("The search returned no results")
         return
+
+    # Get all the data that exceed 10000
+    if args.all and data["total"] > 10000: 
+        i = 2
+        size = 0 
+            
+        if data["total"] in range(10001,30000,1):
+                total = data["total"]
+                page = total // 10000
+                size = total % 10000                
+        else:
+                # if data => 30000 
+                page=3
+                size = 10000
+                print(f"The limitation of result is 30,000")
+        # loop the data page
+        while i <= page:
+            response = query_api(query, args.size, email, api_key,i)
+            if response.status_code != 200:
+                print(f"HTTP Response Code: {response.status_code}")
+                print(response.text)
+                return
+            datatmp = response.json()
+            data["entries"] += datatmp["entries"]
+            datatmp.clear()
+            i +=1
+        # get the remaining data of page
+        if page < 3 and size != 0:
+            response = query_api(query, args.size, email, api_key,i)
+            if response.status_code != 200:
+                print(f"HTTP Response Code: {response.status_code}")
+                print(response.text)
+                return
+            datatmp = response.json()
+            data["entries"] += datatmp["entries"]
+            datatmp.clear()
 
     sorted_keys = sorted(['email', 'ip_address', 'username', 'password', 'hashed_password', 'hash_type', 'name', 'vin', 'address', 'phone'])
 
