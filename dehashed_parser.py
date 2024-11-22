@@ -121,7 +121,7 @@ def main():
             response = query_api(query, args.size, email, api_key,i)
             if response.status_code != 200:
                 print(f"HTTP Response Code: {response.status_code}")
-                print(response.text)
+                #print(response.text)
                 return
             datatmp = response.json()
             data["entries"] += datatmp["entries"]
@@ -132,7 +132,7 @@ def main():
             response = query_api(query, args.size, email, api_key,i)
             if response.status_code != 200:
                 print(f"HTTP Response Code: {response.status_code}")
-                print(response.text)
+                #print(response.text)
                 return
             datatmp = response.json()
             data["entries"] += datatmp["entries"]
