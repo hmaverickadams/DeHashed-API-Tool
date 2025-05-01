@@ -12,6 +12,9 @@ dependencies = [
 where = ["."]
 include = ["dehashapitool*"]
 
+[tool.poetry.package.include]
+"dehashapitool/config.txt" = "dehashapitool"
+
 [project.scripts]
 dat = "dehashapitool.run:main"
 dehashapitool = "dehashapitool.run:main"

@@ -4,6 +4,8 @@ import re
 import json
 import csv
 from urllib.parse import quote
+import importlib.resources
+
 
 def escape_special_chars(query):
     reserved_chars = "+-=&&||><!(){}[]^\"~*?:"
@@ -41,7 +43,7 @@ def unique_password_results(data):
     return unique_results
 
 def main():
-    with open('config.txt', 'r') as file:
+    with importlib.resources.open_text('dehashapitool', 'config.txt') as file:
         email, api_key = file.read().splitlines()
     
     parser = argparse.ArgumentParser(description="Query the Dehashed API", 
