@@ -6,7 +6,6 @@ import csv
 from urllib.parse import quote
 import importlib.resources
 
-
 def escape_special_chars(query):
     reserved_chars = "+-=&&||><!(){}[]^\"~*?:"
     for char in reserved_chars:
@@ -21,13 +20,13 @@ def build_query(args):
                 queries.append(f"{key}:{escape_special_chars(value)}")
     return "&".join(queries)
 
-def query_api(query, size, email, api_key):
+def query_api(query, size, dehashed_email, dehashed_key):
     headers = {
         'Accept': 'application/json',
     }
     response = requests.get(
         f'https://api.dehashed.com/search?query={query}&size={size}', 
-        auth=(email, api_key), 
+        auth=(dehashed_email, dehashed_key), 
         headers=headers
     )
     return response
@@ -42,16 +41,14 @@ def unique_password_results(data):
             unique_results.append(entry)
     return unique_results
 
-def main():
-    with importlib.resources.open_text('dehashapitool', 'config.txt') as file:
-        email, api_key = file.read().splitlines()
-    
+def load_args():
     parser = argparse.ArgumentParser(description="Query the Dehashed API", 
                                      epilog="Usage examples:\n"
-                                            "  dehashed_parser.py -u username\n"
-                                            "  dehashed_parser.py -e email@example.com --output results.csv\n"
-                                            "  dehashed_parser.py -e @example.com --only-passwords\n"
-                                            "  dehashed_parser.py -i 192.168.0.1 -s 100",
+                                            "  dat -de jdoe@example.com --key --store-creds\n"
+                                            "  dehashapitool -u username\n"
+                                            "  dehashapitool -e email@example.com --output results.csv\n"
+                                            "  dat -e @example.com --only-passwords\n"
+                                            "  dat -i 192.168.0.1 -s 100 -de jdoe@example.com --key",
                                      formatter_class=argparse.RawTextHelpFormatter)
 
     # Required arguments
@@ -71,7 +68,58 @@ def main():
     parser.add_argument('-s', '--size', type=int, default=10000, help="Specify the size, between 1 and 10000")
     parser.add_argument('--only-passwords', action="store_true", help="Return only passwords")
 
+    # Dehashed API credential arguments
+    api_group = parser.add_argument_group('API Arguments', 'Arguments related to Dehashed API credentials')
+    api_group.add_argument(
+        '-de',
+        '--dehashed-email',
+        dest="dehashed_email",
+        nargs='?',
+        const=True,
+        help='Dehashed account email address (overrides config.txt value)'
+        )
+    api_group.add_argument(
+        '--key',
+        '--dehashed-key',
+        dest="dehashed_key",
+        nargs='?',
+        const=True,
+        help='Dehashed API key (overrides config.txt value)'
+        )
+    api_group.add_argument(
+        '--store-creds',
+        dest="store_creds",
+        action="store_true",
+        help="Stored the Dehashed email and API key in the config.txt file (overrides previous config.txt value)"
+        )
+
     args = parser.parse_args()
+
+    # Prompt for Dehashed API email/key if not passed
+    if args.dehashed_email is True:
+        args.dehashed_email = input("DeHashed Email Address: ")
+    if args.dehashed_key is True:
+        args.dehashed_key = input("DeHashed API Key: ")
+
+    # Read from config file
+    with importlib.resources.open_text('dehashapitool', 'config.txt') as file:
+        dehashed_email, dehashed_key = file.read().splitlines()
+        if not args.dehashed_email:
+            args.dehashed_email = dehashed_email
+        if not args.dehashed_key:
+            args.dehashed_key = dehashed_key
+
+    # Write to config file
+    if args.store_creds:
+        with importlib.resources.path('dehashapitool', 'config.txt') as config_path:
+            with open(config_path, 'w') as file:
+                file.write(f"{args.dehashed_email}\n")
+                file.write(f"{args.dehashed_key}\n")
+
+    return args
+
+def main():
+    args = load_args()
 
     # Check that at least one search criteria argument is provided
     search_criteria = ['username', 'email', 'hashed_password', 'ip_address', 'vin', 'name', 'address', 'phone_number', 'password']
@@ -83,7 +131,7 @@ def main():
         return
     
     query = build_query(args)
-    response = query_api(query, args.size, email, api_key)
+    response = query_api(query, args.size, args.dehashed_email, args.dehashed_key)
     
     if response.status_code != 200:
         print(f"HTTP Response Code: {response.status_code}")
