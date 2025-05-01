@@ -1,0 +1,21 @@
+[project]
+name = "dehashapitool"
+version = "0.1.1"
+description = "Dehash-API-Tool(DAT):A command-line tool to query the Dehashed API. Easily search for various parameters like usernames, emails, hashed passwords, IP addresses, and more."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests==2.26.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dehashapitool*"]
+
+[project.scripts]
+dat = "dehashapitool.run:main"
+dehashapitool = "dehashapitool.run:main"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
