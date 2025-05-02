@@ -116,19 +116,21 @@ def load_args():
                 file.write(f"{args.dehashed_email}\n")
                 file.write(f"{args.dehashed_key}\n")
 
-    return args
-
-def main():
-    args = load_args()
-
     # Check that at least one search criteria argument is provided
     search_criteria = ['username', 'email', 'hashed_password', 'ip_address', 'vin', 'name', 'address', 'phone_number', 'password']
     if not any(getattr(args, criteria) for criteria in search_criteria):
+        if args.store_creds:
+            return  # Exit if only the stored creds are provided
         parser.error("At least one search criteria argument is required.")
 
     if not 1 <= args.size <= 10000:
         print("Size value should be between 1 and 10000.")
         return
+
+    return args
+
+def main():
+    args = load_args()
     
     query = build_query(args)
     response = query_api(query, args.size, args.dehashed_email, args.dehashed_key)
