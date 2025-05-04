@@ -6,6 +6,12 @@ import importlib.resources
 GENERAL_SEARCH_URL = "https://api.dehashed.com/v2/search"
 PASSWORD_SEARCH_URL = "https://api.dehashed.com/v2/search-password"
 
+# Print colors ANSI escape codes
+BLUE = "\033[94m"
+RED = "\033[91m"
+GREY = "\033[90m"
+RESET = "\033[0m"
+
 def build_query(args):
     queries = []
     wildcard = False
@@ -21,7 +27,7 @@ def build_query(args):
                         if not args.regex:
                             wildcard = True
                         if not args.regex and "*" in value:  # At the time of writing (MAy 2025) searches using "*" seems to be broken
-                            print(' [!] Searching using "*" seems to be broken in the Dehashed API side (as of May 2025). Use "?" instead of single character wildcards') 
+                            print(f"  {RED}[!] Searching using \"*\" seems to be broken in the Dehashed API side (as of May 2025). Use \"?\" instead of single character wildcards{RESET}") 
                             while True:
                                 proceed = input("    [-] Would you like to continue with the request (y/n): ")
                                 if proceed.lower() == "y" or proceed.lower()== "yes":
@@ -150,11 +156,11 @@ def load_args():
     if not any(getattr(args, criteria) for criteria in search_criteria):
         if args.store_key:
             exit()  # Exit if only the stored creds are provided
-        parser.error("At least one search criteria argument is required.")
+        parser.error("[!] At least one search criteria argument is required.")
 
     if not 1 <= args.size <= 10000:
-        print("Size value should be between 1 and 10000.")
-        return
+        parser.error("[!] Size value should be between 1 and 10000.")
+        exit()
     
     return args
 
@@ -176,8 +182,9 @@ def recursive_search(query: str, size: int, wildcard: bool, regex: bool, api_key
             )
         
         if response.status_code != 200:
-            print(f"HTTP Response Code: {response.status_code}")
-            print(response.text)
+            print(f"{RED}[!] Error in API call!{RESET}")
+            print(f"  {GREY}[-] HTTP Response Code: {response.status_code}{RESET}")
+            print(f"  {GREY}[-] Response: {response.text}{RESET}")
             exit() 
 
         # Parse results
@@ -187,15 +194,15 @@ def recursive_search(query: str, size: int, wildcard: bool, regex: bool, api_key
             total = data['total']
             entries = entries + data['entries']
         except ValueError:
-            print("Unexpected API response format.")
-            print(data)  # This will print out the full API response to help you debug.
+            print(f"{RED}[!] Unexpected API response format.{RESET}")
+            print(f"  {GREY}[-] Data: {data}{RESET}")  # This will print out the full API response to help you debug.
             exit()
 
         # Don't loop again if there is no more data on other pages
         if not total > (size * page_num):
             break
         if (size * page_num) >= 10000:
-            print("  [!] Maximum pagination depth hit (10,000). Saving results as is...")
+            print("  {RED}[!] Maximum pagination depth hit (10,000). Saving results as is...{RESET}")
             break
 
     return balance, entries
@@ -212,7 +219,7 @@ def main():
         )
     
     if not entries:
-        print("The search returned no results")
+        print("\n{GREY}[-] The search returned no results{RESET}")
         return
 
     sorted_keys = sorted(['email', 'ip_address', 'username', 'password', 'hashed_password', 'hash_type', 'name', 'vin', 'address', 'phone', 'domain'])
@@ -231,17 +238,17 @@ def main():
                 identifier_res = entry.get(primary_key, '')
             password_res = entry.get('password', '')
             if identifier_res and password_res:
-                print(f"{primary_key}: {identifier_res}, password: {password_res}")
+                print(f"  {BLUE}[{identifier_res}]{RESET}: {password_res}")
 
     elif not args.output_silently:
         for key in sorted_keys:
             values = list(set([flatten_list(entry[key]).lower() for entry in entries if key in entry and entry[key]]))
             if values:
                 values.sort()
-                print(f"{key}s: {', '.join(values)}")
+                print(f"\n  {BLUE}[{key}s]{RESET}: {', '.join(values)}")
 
     if not args.output_silently:
-        print(f"You have {balance} API credits remaining")
+        print(f"\n{GREY}[-] You have {balance} API credits remaining.{RESET}")
 
     if args.output or args.output_silently:
         all_keys = set()
@@ -268,8 +275,8 @@ def main():
                     writer.writerow({k: flatten_list(entry[k]) for k in sorted_all_keys if k in entry and entry[k] and entry[k] != "null"})
 
     if args.output_silently:
-        print(f"Results returned and saved in {args.output_silently}")
-        print(f"You have {balance} API credits remaining")
+        print(f"\n{GREY}[-] Results returned and saved in {args.output_silently}{RESET}")
+        print(f"{GREY}[-] You have {balance} API credits remaining{RESET}")
             
 if __name__ == "__main__":
     main()
