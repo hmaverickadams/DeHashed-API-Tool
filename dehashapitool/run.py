@@ -1,41 +1,78 @@
 import argparse
 import requests
-import re
-import json
 import csv
-from urllib.parse import quote
 import importlib.resources
 
-def escape_special_chars(query):
-    reserved_chars = "+-=&&||><!(){}[]^\"~*?:"
-    for char in reserved_chars:
-        query = query.replace(char, f"\{char}")
-    return quote(query, safe='')
+GENERAL_SEARCH_URL = "https://api.dehashed.com/v2/search"
+PASSWORD_SEARCH_URL = "https://api.dehashed.com/v2/search-password"
 
 def build_query(args):
     queries = []
+    wildcard = False
     for key, value in vars(args).items():
-        if key in ['address', 'email', 'hashed_password', 'ip_address', 'name', 'password', 'phone_number', 'username', 'vin']:
+        if key in ['address', 'email', 'hashed_password', 'ip_address', 'name', 'password', 'phone', 'username', 'vin', 'domain']:                    
             if value:
-                queries.append(f"{key}:{escape_special_chars(value)}")
-    return "&".join(queries)
+                if key == 'email':
+                    # Regexing/Wildcarding emails requires that you split the query into email and domain.
+                    if check_wildcard(value) or args.regex:
+                        email, domain = value.split("@")
+                        queries.append(f"email:{email}@{domain}")
+                        queries.append(f"domain:{domain}")
+                        if not args.regex:
+                            wildcard = True
+                        if not args.regex and "*" in value:  # At the time of writing (MAy 2025) searches using "*" seems to be broken
+                            print(' [!] Searching using "*" seems to be broken in the Dehashed API side (as of May 2025). Use "?" instead of single character wildcards') 
+                            while True:
+                                proceed = input("    [-] Would you like to continue with the request (y/n): ")
+                                if proceed.lower() == "y" or proceed.lower()== "yes":
+                                    break
+                                if proceed.lower() == "n" or proceed.lower()== "no":
+                                    exit()
+                        continue
 
-def query_api(query, size, dehashed_email, dehashed_key):
-    headers = {
-        'Accept': 'application/json',
-    }
-    response = requests.get(
-        f'https://api.dehashed.com/search?query={query}&size={size}', 
-        auth=(dehashed_email, dehashed_key), 
-        headers=headers
-    )
-    return response
+                if not args.regex:
+                    if check_wildcard(value):
+                        wildcard = True
+                
+                if key == 'domain':
+                    queries.append(f"{key}:{value}")  # Domains will not except searches in quotes
+                    continue
+
+                queries.append(f"{key}:\"{value}\"")
+    
+    return "&".join(queries), wildcard
+
+def check_wildcard(query_string):
+    # Use ? to replace a single character, and * for multiple characters (Cannot be used along with Regex search)
+    if "?" in query_string or "*" in query_string:
+        return True
+
+def v2_search(query: str, page: int, size: int, wildcard: bool, regex: bool, de_dupe: bool, api_key: str) -> dict:
+    res = requests.post(GENERAL_SEARCH_URL, json={
+        "query": query,
+        "page": page,
+        "size": size,
+        "wildcard": wildcard,
+        "regex": regex,
+        "de_dupe": de_dupe,
+    }, headers={
+        "Content-Type": "application/json",
+        "DeHashed-Api-Key": api_key,
+    })
+    return res
+
+def flatten_list(input_list):
+    if type(input_list) != list:
+        return input_list
+    if len(input_list) == 1:
+        return input_list[0]
+    return ",".join(input_list)
 
 def unique_password_results(data):
     seen = set()
     unique_results = []
     for entry in data:
-        identifier = (entry.get('email', '').lower(), entry.get('password', ''))
+        identifier = flatten_list(entry.get('email', '')).lower(), flatten_list(entry.get('password', ''))
         if identifier not in seen:
             seen.add(identifier)
             unique_results.append(entry)
@@ -44,10 +81,10 @@ def unique_password_results(data):
 def load_args():
     parser = argparse.ArgumentParser(description="Query the Dehashed API", 
                                      epilog="Usage examples:\n"
-                                            "  dat -de jdoe@example.com --key --store-creds\n"
+                                            "  dat --key <API_KEY> --store-creds\n"
                                             "  dehashapitool -u username\n"
                                             "  dehashapitool -e email@example.com --output results.csv\n"
-                                            "  dat -e @example.com --only-passwords\n"
+                                            "  dat -d example.com --only-passwords\n"
                                             "  dat -i 192.168.0.1 -s 100 -de jdoe@example.com --key",
                                      formatter_class=argparse.RawTextHelpFormatter)
 
@@ -58,26 +95,20 @@ def load_args():
     parser.add_argument('-i', '--ip_address', help="Specify the IP address")
     parser.add_argument('-n', '--name', help="Specify the name")
     parser.add_argument('-p', '--password', help="Specify the password")
-    parser.add_argument('-P', '--phone_number', help="Specify the phone number")
+    parser.add_argument('-P', '--phone', help="Specify the phone number")
     parser.add_argument('-u', '--username', help="Specify the username")
     parser.add_argument('-v', '--vin', help="Specify the VIN")
+    parser.add_argument('-d', '--domain', help="Specify the domain")
 
     # Optional arguments
     parser.add_argument('-o', '--output', help="Outputs to CSV. A file name is required.")
     parser.add_argument('-oS', '--output_silently', help="Outputs to CSV silently. A file name is required.")
     parser.add_argument('-s', '--size', type=int, default=10000, help="Specify the size, between 1 and 10000")
     parser.add_argument('--only-passwords', action="store_true", help="Return only passwords")
+    parser.add_argument('--regex', action="store_true", help="Use regex search instead of string (seems to be broken as of May 2025)")
 
     # Dehashed API credential arguments
     api_group = parser.add_argument_group('API Arguments', 'Arguments related to Dehashed API credentials')
-    api_group.add_argument(
-        '-de',
-        '--dehashed-email',
-        dest="dehashed_email",
-        nargs='?',
-        const=True,
-        help='Dehashed account email address (overrides config.txt value)'
-        )
     api_group.add_argument(
         '--key',
         '--dehashed-key',
@@ -87,98 +118,134 @@ def load_args():
         help='Dehashed API key (overrides config.txt value)'
         )
     api_group.add_argument(
-        '--store-creds',
-        dest="store_creds",
+        '--store-key',
+        dest="store_key",
         action="store_true",
-        help="Stored the Dehashed email and API key in the config.txt file (overrides previous config.txt value)"
+        help="Stored the Dehashed API key in cleartext in the config.txt file (overrides previous config.txt values)"
         )
 
     args = parser.parse_args()
 
-    # Prompt for Dehashed API email/key if not passed
-    if args.dehashed_email is True:
-        args.dehashed_email = input("DeHashed Email Address: ")
+    # Prompt for Dehashed API key if not passed
     if args.dehashed_key is True:
         args.dehashed_key = input("DeHashed API Key: ")
 
     # Read from config file
     with importlib.resources.open_text('dehashapitool', 'config.txt') as file:
-        dehashed_email, dehashed_key = file.read().splitlines()
-        if not args.dehashed_email:
-            args.dehashed_email = dehashed_email
+        dehashed_key = file.read().splitlines()[0]
         if not args.dehashed_key:
-            args.dehashed_key = dehashed_key
+            if dehashed_key == "<api-key>":
+                args.dehashed_key = input("DeHashed API Key: ")
+            else:
+                args.dehashed_key = dehashed_key
 
     # Write to config file
-    if args.store_creds:
+    if args.store_key:
         with importlib.resources.path('dehashapitool', 'config.txt') as config_path:
             with open(config_path, 'w') as file:
-                file.write(f"{args.dehashed_email}\n")
                 file.write(f"{args.dehashed_key}\n")
 
     # Check that at least one search criteria argument is provided
-    search_criteria = ['username', 'email', 'hashed_password', 'ip_address', 'vin', 'name', 'address', 'phone_number', 'password']
+    search_criteria = ['username', 'email', 'hashed_password', 'ip_address', 'vin', 'name', 'address', 'phone', 'password', 'domain']
     if not any(getattr(args, criteria) for criteria in search_criteria):
-        if args.store_creds:
-            return  # Exit if only the stored creds are provided
+        if args.store_key:
+            exit()  # Exit if only the stored creds are provided
         parser.error("At least one search criteria argument is required.")
 
     if not 1 <= args.size <= 10000:
         print("Size value should be between 1 and 10000.")
         return
-
+    
     return args
+
+def recursive_search(query: str, size: int, wildcard: bool, regex: bool, api_key: str):
+    entries = []
+    balance = 0
+    total = 0
+    page_num = 0
+    while True:
+        page_num += 1
+        response = v2_search(
+            query=query,
+            page=page_num,
+            size=size,
+            wildcard=wildcard,
+            regex=regex,
+            de_dupe=False,
+            api_key=api_key
+            )
+        
+        if response.status_code != 200:
+            print(f"HTTP Response Code: {response.status_code}")
+            print(response.text)
+            exit() 
+
+        # Parse results
+        try:
+            data = response.json()
+            balance = data['balance']
+            total = data['total']
+            entries = entries + data['entries']
+        except ValueError:
+            print("Unexpected API response format.")
+            print(data)  # This will print out the full API response to help you debug.
+            exit()
+
+        # Don't loop again if there is no more data on other pages
+        if not total > (size * page_num):
+            break
+        if (size * page_num) >= 10000:
+            print("  [!] Maximum pagination depth hit (10,000). Saving results as is...")
+            break
+
+    return balance, entries
 
 def main():
     args = load_args()
+    query, wildcard = build_query(args)
+    balance, entries = recursive_search(
+        query=query,
+        size=args.size,
+        wildcard=wildcard,
+        regex=args.regex,
+        api_key=args.dehashed_key
+        )
     
-    query = build_query(args)
-    response = query_api(query, args.size, args.dehashed_email, args.dehashed_key)
-    
-    if response.status_code != 200:
-        print(f"HTTP Response Code: {response.status_code}")
-        print(response.text)
-        return
-
-    data = response.json()
-
-    # Check if "entries" key is in the data
-    if "entries" not in data:
-        print("Unexpected API response format.")
-        print(data)  # This will print out the full API response to help you debug.
-        return
-
-    if not data["entries"]:
+    if not entries:
         print("The search returned no results")
         return
 
-    sorted_keys = sorted(['email', 'ip_address', 'username', 'password', 'hashed_password', 'hash_type', 'name', 'vin', 'address', 'phone'])
+    sorted_keys = sorted(['email', 'ip_address', 'username', 'password', 'hashed_password', 'hash_type', 'name', 'vin', 'address', 'phone', 'domain'])
 
-    primary_key = next(key for key, value in vars(args).items() if value and key in ['address', 'email', 'hashed_password', 'ip_address', 'name', 'password', 'phone_number', 'username', 'vin'])
+    primary_key = next(key for key, value in vars(args).items() if value and key in ['address', 'email', 'hashed_password', 'ip_address', 'name', 'password', 'phone', 'username', 'vin', 'domain'])
 
-    unique_results = unique_password_results(data["entries"])
-    unique_results.sort(key=lambda x: x.get(primary_key, "").lower())
+    unique_results = unique_password_results(entries)
+    unique_results.sort(key=lambda x: flatten_list(x.get(primary_key, "")).lower())
 
     if args.only_passwords and not args.output_silently:
         for entry in unique_results:
-            identifier_res = entry.get(primary_key, '')
+            if primary_key == "domain":
+                identifier_res = entry.get("email", '')
+                primary_key = "email"
+            else:
+                identifier_res = entry.get(primary_key, '')
             password_res = entry.get('password', '')
             if identifier_res and password_res:
                 print(f"{primary_key}: {identifier_res}, password: {password_res}")
 
     elif not args.output_silently:
         for key in sorted_keys:
-            values = list(set([entry[key].lower() for entry in data["entries"] if key in entry and entry[key]]))
+            values = list(set([flatten_list(entry[key]).lower() for entry in entries if key in entry and entry[key]]))
             if values:
                 values.sort()
                 print(f"{key}s: {', '.join(values)}")
 
     if not args.output_silently:
-        print(f"You have {data['balance']} API credits remaining")
+        print(f"You have {balance} API credits remaining")
 
     if args.output or args.output_silently:
         all_keys = set()
-        for entry in data["entries"]:
+        for entry in entries:
             all_keys.update([k for k, v in entry.items() if v and v != "null"])
 
         # Exclude 'database' and 'id'
@@ -197,12 +264,12 @@ def main():
             else:
                 writer = csv.DictWriter(csvfile, fieldnames=sorted_all_keys)
                 writer.writeheader()
-                for entry in sorted(data["entries"], key=lambda x: x.get(primary_key, "").lower()):
-                    writer.writerow({k: entry[k] for k in sorted_all_keys if k in entry and entry[k] and entry[k] != "null"})
+                for entry in sorted(entries, key=lambda x: flatten_list(x.get(primary_key, "")).lower()):
+                    writer.writerow({k: flatten_list(entry[k]) for k in sorted_all_keys if k in entry and entry[k] and entry[k] != "null"})
 
     if args.output_silently:
         print(f"Results returned and saved in {args.output_silently}")
-        print(f"You have {data['balance']} API credits remaining")
+        print(f"You have {balance} API credits remaining")
             
 if __name__ == "__main__":
     main()
