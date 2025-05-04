@@ -2,6 +2,8 @@ import argparse
 import requests
 import csv
 import importlib.resources
+from time import sleep
+import math
 
 GENERAL_SEARCH_URL = "https://api.dehashed.com/v2/search"
 PASSWORD_SEARCH_URL = "https://api.dehashed.com/v2/search-password"
@@ -169,6 +171,7 @@ def recursive_search(query: str, size: int, wildcard: bool, regex: bool, api_key
     balance = 0
     total = 0
     page_num = 0
+    unlimited_calls = False
     while True:
         page_num += 1
         response = v2_search(
@@ -202,8 +205,22 @@ def recursive_search(query: str, size: int, wildcard: bool, regex: bool, api_key
         if not total > (size * page_num):
             break
         if (size * page_num) >= 10000:
-            print("  {RED}[!] Maximum pagination depth hit (10,000). Saving results as is...{RESET}")
+            print(f"  {RED}[!] Maximum pagination depth hit (10,000). Saving results as is...{RESET}")
             break
+
+        # Sanity check calls to prevent burning all you API keys
+        if not unlimited_calls and (total / size) > 25:
+            api_calls = math.ceil(total / size)
+            while True:
+                proceed = input(f"  {RED}[!] You are about to make {api_calls} API calls. Are you sure you want to continue? (y/n): {RESET}")
+                if proceed.lower() == "y" or proceed.lower()== "yes":
+                    unlimited_calls = True
+                    break
+                if proceed.lower() == "n" or proceed.lower()== "no":
+                    exit()
+
+        # Avoid breaking DeHashed ratelimit
+        sleep(0.1)
 
     return balance, entries
 
