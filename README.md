@@ -138,6 +138,9 @@ The above will return 10 results utilizing the wildcard
 ## Contributions
 Contributions are always welcome! Please open an issue or submit a pull request.
 
+Special thanks:
+Duncan Woosley (d-woosley) - Contributions to v1 to v2 API upgrades
+
 ## Copyright
 DeHashed API Tool by Heath Adams Copyright (C) 2025 TCM Security, Inc.
 
