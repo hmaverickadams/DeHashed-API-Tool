@@ -1,2 +1,0 @@
-<email@email.com>
-<api-key>
