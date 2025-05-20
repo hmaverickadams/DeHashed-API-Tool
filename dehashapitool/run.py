@@ -236,7 +236,7 @@ def main():
         )
     
     if not entries:
-        print("\n{GREY}[-] The search returned no results{RESET}")
+        print(f"\n{GREY}[-] The search returned no results{RESET}")
         return
 
     sorted_keys = sorted(['email', 'ip_address', 'username', 'password', 'hashed_password', 'hash_type', 'name', 'vin', 'address', 'phone', 'domain'])
