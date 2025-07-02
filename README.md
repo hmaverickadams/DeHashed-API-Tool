@@ -31,7 +31,7 @@ dehashapitool -u username --key
 
 **Store Keys in config.txt file (Key prompted)**
 ```bash
-dat --store-creds
+dat --store-key
 ```
 
 > **NOTE**: `dat` can be used as the command instead of `dehashapitool` to save some keystrokes, but either one will run the script.
