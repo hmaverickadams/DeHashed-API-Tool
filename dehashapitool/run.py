@@ -89,7 +89,7 @@ def unique_password_results(data):
 def load_args():
     parser = argparse.ArgumentParser(description="Query the Dehashed API", 
                                      epilog="Usage examples:\n"
-                                            "  dat --key <API_KEY> --store-creds\n"
+                                            "  dat --key <API_KEY> --store-key\n"
                                             "  dehashapitool -u username\n"
                                             "  dehashapitool -e email@example.com --output results.csv\n"
                                             "  dat -d example.com --only-passwords\n"
