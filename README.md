@@ -88,7 +88,7 @@ API Arguments:
   --store-key           Stored the Dehashed API key in cleartext in the config.txt file (overrides previous config.txt values)
 
 Usage examples:
-  dat --key <API_KEY> --store-creds
+  dat --key <API_KEY> --store-key
   dehashapitool -u username
   dehashapitool -e email@example.com --output results.csv
   dat -d example.com --only-passwords
